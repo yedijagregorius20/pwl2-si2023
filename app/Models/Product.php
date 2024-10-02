@@ -8,6 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
+    use HasFactory;
+
+    protected $fillable = [
+        'image',
+        'title',
+        'product_category_id',
+        'id_supplier',
+        'description',
+        'price',
+        'stock',
+];
     public function get_product(){
         //get all products
         // $sql = $this->select("products.*", "category_product.product_category_name as product_category_name")
@@ -18,4 +29,8 @@ class Product extends Model
         
     return $sql;
     }
+    public function get_category_product() {
+        return DB::table('category_product')
+            ->select('id', 'product_category_name');
+}
 }
