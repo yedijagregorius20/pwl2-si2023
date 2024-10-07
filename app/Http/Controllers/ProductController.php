@@ -8,7 +8,7 @@ use App\Models\Supplier;
 use Illuminate\View\View;
 //import return type redirectResponse
 use Illuminate\Http\RedirectResponse;
-
+use Illuminate\Support\Facades\Storage;
 
 
 class ProductController extends Controller
@@ -89,4 +89,87 @@ class ProductController extends Controller
  
     }
 
+    public function show(string $id): View {
+        $product = Product::where("products.id", $id)
+                  ->join('category_product', 'category_product.id', '=', 'products.product_category_id')
+                  ->select('products.*', 'category_product.product_category_name')
+                  ->firstOrFail();
+
+
+        return view('products.show', compact('product'));
+    }
+    
+    public function edit(string $id): View {
+        $product_model = new Product;
+        $data['product'] = Product::where("products.id", $id)
+            ->join('category_product', 'category_product.id', '=', 'products.product_category_id')
+            ->select('products.*', 'category_product.product_category_name')
+            ->firstOrFail();
+
+        $supplier_model = new Supplier;
+
+        $data['categories'] = $product_model->get_category_product()->get();
+        $data['suppliers_'] = $supplier_model->get_supplier()->get();
+
+        return view('products.edit', compact('data'));
+    }
+
+    public function update(Request $request, $id): RedirectResponse {
+        $request->validate([
+            'image'                 => 'required|image|mimes:jpeg,jpg,png|max:2048',
+            'title'                 => 'required|min:5',
+            'description'           => 'required|min:10',
+            'price'                 => 'required|numeric',
+            'stock'                 => 'required|numeric'
+        ]);
+
+        $product_model = new Product();
+        $product = Product::where("products.id", $id)
+            ->join('category_product', 'category_product.id', '=', 'products.product_category_id')
+            ->select('products.*', 'category_product.product_category_name')
+            ->firstOrFail();
+
+        if($request->hasFile('image')) {
+            $image = $request->file('image');
+            $image->storeAs('public/images', $image->hashName());
+
+            Storage::delete('public/images/' . $product->image);
+
+            $product->update([
+                'image'                 => $image->hashName(),
+                'title'                 => $request->title,
+                'product_category_id'   => $request->product_category_id,
+                'id_supplier'           => $request->id_supplier,
+                'description'           => $request->description,
+                'price'                 => $request->price,
+                'stock'                 => $request->stock
+            ]);
+        } else {
+            $product->update([
+                'title'                 => $request->title,
+                'product_category_id'   => $request->product_category_id,
+                'id_supplier'           => $request->id_supplier,
+                'description'           => $request->description,
+                'price'                 => $request->price,
+                'stock'                 => $request->stock
+            ]);
+        }
+
+        return redirect()->route('products.index')->with(['success' => 'Data Berhasil Diubah!']);
+    }
+
+    public function destroy($id): RedirectResponse {
+        $product_model = new Product;
+        $product = Product::where("products.id", $id)
+            ->join('category_product', 'category_product.id', '=', 'products.product_category_id')
+            ->select('products.*', 'category_product.product_category_name')
+            ->firstOrFail();
+
+        Storage::delete('public/images/' . $product->image);
+        $product->delete();
+
+        return redirect()->route('products.index')->with(['success' => 'Data Berhasil Dihapus!']);
 }
+
+}
+
